@@ -1,56 +1,74 @@
-<script>
-	import { setContext } from 'svelte';
+<script lang='ts'>
+	import { onMount, setContext } from 'svelte';
 
 	let startIndex = -1;
 	let currentIndex = 0;
 
+	onMount(() => document.onkeydown = (e: KeyboardEvent) => {
+		if (e.key === 'ArrowRight') {
+			next();
+		}
+
+		if (e.key === 'ArrowLeft') {
+			prev();
+		}
+	});
+
 	setContext('SetIndex', {
 		index: () => {
 			startIndex++;
-
 			return startIndex;
 		},
-		current: () => currentIndex,
+		current: () => currentIndex
 	});
 
-	const next = () => {
-		if (currentIndex < startIndex) {
+	const toggleSlideClasses = (direction: NavigateDirection, currentSlide: Element) => {
+		const navigatingSlide = direction === NavigateDirection.Next
+			? currentSlide.nextElementSibling
+			: currentSlide.previousElementSibling;
+
+		currentSlide.classList.remove('translate-x-0');
+		currentSlide.classList.add(direction === NavigateDirection.Next ? '-translate-x-full' : 'translate-x-full');
+
+		navigatingSlide.classList.remove(direction === NavigateDirection.Next ? 'translate-x-full' : '-translate-x-full');
+		navigatingSlide.classList.add('translate-x-0');
+	};
+
+	const mutateIndex = (direction: NavigateDirection): Boolean => {
+		if (direction === NavigateDirection.Next) {
+			if (currentIndex >= startIndex) {
+				return false;
+			}
+
 			currentIndex++;
-
-			let activeSlide = document.querySelector('.slide.translate-x-0');
-
-			activeSlide.classList.remove('translate-x-0');
-			activeSlide.classList.add('-translate-x-full');
-
-			let nextSlide = activeSlide.nextElementSibling;
-
-			nextSlide.classList.remove('translate-x-full');
-			nextSlide.classList.add('translate-x-0');
 		}
 
-	};
+		if (direction === NavigateDirection.Previous) {
+			if (currentIndex <= 0) {
+				return false;
+			}
 
-	const prev = () => {
-		if (currentIndex > 0) {
 			currentIndex--;
-
-			let activeSlide = document.querySelector('.slide.translate-x-0');
-			activeSlide.classList.remove('translate-x-0');
-			activeSlide.classList.add('translate-x-full');
-
-			let previousSlide = activeSlide.previousElementSibling;
-
-			previousSlide.classList.remove('-translate-x-full');
-			previousSlide.classList.add('translate-x-0');
 		}
+
+		return true;
 	};
+
+	const navigate = (direction: NavigateDirection) => mutateIndex(direction) && toggleSlideClasses(direction, document.querySelector('.slide.translate-x-0'));
+	const next = () => navigate(NavigateDirection.Next);
+	const prev = () => navigate(NavigateDirection.Previous);
+
+	enum NavigateDirection {
+		Next,
+		Previous
+	}
 </script>
 
 <div class='presentation-container'>
 	<div class='slide-container'>
-		<slot>
-		</slot>
+		<slot></slot>
 	</div>
+
 	<div class='slide-controls'>
 		<div class='presentation-control prev' on:click={() => prev()}>
 			<svg xmlns='http://www.w3.org/2000/svg' class='h-20 w-20' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
@@ -77,45 +95,54 @@
 	</div>
 </div>
 
-<style lang='postcss'>
-    .presentation-container {
-        /*bg-gradient-to-br from-orange-600 to-orange-500*/
-        @apply w-screen h-screen bg-gradient-to-br from-orange-400 to-orange-300;
-    }
+<style lang='scss'>
+  .presentation-container {
+    @apply w-screen h-screen bg-gradient-to-br from-orange-400 to-orange-300 overflow-hidden;
 
     .slide-container {
-        @apply relative;
+      @apply relative;
     }
 
     .slide-controls {
-        @apply absolute bottom-0 left-0 right-0 flex justify-center content-center flex-row h-28;
-    }
+      @apply absolute bottom-0 left-0 right-0 flex justify-center content-center flex-row h-28;
 
-    .presentation-display {
-        @apply flex content-center justify-center;
-    }
+      .presentation-display {
+        @apply flex content-center justify-center text-2xl text-white pt-8;
+      }
 
-    .presentation-control {
+      .presentation-control {
         @apply flex transition-all duration-150 ease-in-out grow justify-center content-center text-xl text-slate-300 opacity-5;
-    }
 
-    .presentation-control svg {
-        @apply origin-center transition-all duration-150 ease-in-out;
-    }
+        svg {
+          @apply origin-center transition-all duration-150 ease-in-out;
+        }
 
-    .presentation-control:hover {
-        @apply text-slate-500 cursor-pointer opacity-100;
-    }
+        &:hover {
+          @apply text-slate-100 cursor-pointer opacity-100;
+        }
 
-    .prev svg, .next svg {
-        @apply pt-4;
-    }
+        &.prev, &.next {
+          svg {
+            @apply pt-4;
+          }
+        }
 
-    .prev:hover svg {
-        @apply pr-4;
-    }
+        &.prev {
+          &:hover {
+            svg {
+              @apply pr-4;
+            }
+          }
+        }
 
-    .next:hover svg {
-        @apply pl-4;
+        &.next {
+          &:hover {
+            svg {
+              @apply pl-4;
+            }
+          }
+        }
+      }
     }
+  }
 </style>
